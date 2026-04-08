@@ -1,0 +1,70 @@
+---
+title: "wrangling"
+format: html
+---
+
+```{r}
+#| message: false
+#| warning: false
+# Load necessary libraries
+library(tidyverse)
+library(readxl)
+library(here)
+library(janitor)
+```
+
+### Read in data
+
+```{r}
+# share of urban population with convenient access to public transportation
+transport_access <- read_excel(here("data", "SDG_11-2-1.xlsx")) %>% 
+  clean_names()
+
+# open space for public use and its accessibility
+public_space <- read_excel(here("data", "SDG_11-7-1.xlsx")) %>% 
+  clean_names()
+
+# average share of green space in urban area, over time
+green_areas <- read_excel(here("data", "green_areas.xlsx"), sheet = 2) %>% 
+  clean_names()
+```
+
+## Table Creation
+
+### Location Table
+
+All three datasets have the same few columns describing the location of their observation:
+- county or territory code
+- country or territory name
+- SDG region
+- SDG subregion
+- city code
+- city name
+
+In the creation of the table, I will select these columns from one of the datasets and ensure that all data types are correct. `city_code` will be the primary key of this table.
+
+```{r}
+# select variables of interest
+location <- public_space %>% 
+  select(country_or_territory_code, country_or_territory_name,
+         sdg_region, sdg_sub_region,
+         city_code, city_name)
+
+glimpse(location) # data types look good!
+```
+### Urban Resources Table
+
+The transportation access and public spaces dataframes will be combined into one, representing urban resources. `city_code` will serve as the primary and foreign key in this table, referencing the location table.
+
+```{r}
+transport_columns <- transport_access %>% 
+  select(city_code, share_of_urban_population_with_convenient_access_to_public_transport_percent) %>% 
+  rename(transport_access = share_of_urban_population_with_convenient_access_to_public_transport_percent)
+
+public_space_columns <- public_space %>% 
+  select(city_code, average_share_of_the_built_up_area_of_cities_that_is_open_space_for_public_use_for_all_percent_a,
+         average_share_of_urban_population_with_convenient_access_to_open_public_spaces_percent_b) %>% 
+  rename(open_space = average_share_of_the_built_up_area_of_cities_that_is_open_space_for_public_use_for_all_percent_a,
+         access = average_share_of_urban_population_with_convenient_access_to_open_public_spaces_percent_b)
+```
+
