@@ -132,6 +132,94 @@ gdp <- gdp %>%
 If GDP is missing from 2024, we replace it with the 2023 GDP. 
 
 ```{r}
+gdp <- gdp %>% 
+  
+  # create a GDP column where...
+  mutate(gdp = case_when(
+    
+    # ... if GDP from 2024 is missing, replace it with 2023
+    is.na(x2024) ~ x2023,
+    
+    # otherwise, keep the 2024 value
+    TRUE ~ x2024
+  ))
+```
 
+
+The country codes between the World Bank data and United Nations data are not the same, so we will join GDP to our country database on country name. This will result in some missing countries.
+
+```{r}
+# join
+country <- country %>% 
+  left_join(gdp, by = join_by(country_or_territory_name == country_name))
+```
+
+```{r}
+# how many countries are missing gdp?
+country %>% 
+  filter(is.na(as.numeric(gdp))) %>% 
+  group_by(country_or_territory_name) %>% 
+  summarize(count = n())
+```
+There are 44 observations that are in the UN data that are not represented in the World Bank data. However, some of those are territories (like "Central and Southern Asia"), whereas others are just named different things in the two datasets. We will standardize some of those names, and rejoin.
+
+```{r}
+# remove redundant names
+country <- country %>% 
+  filter(!country_or_territory_name %in% c("Australia and New Zealand", "Central and Southern Asia",
+                                           "ECA", "ECE", "ECLAC", "ESCAP", "ESCWA", "Eastern and South-eastern Asia",
+                                           "Latin America and the Caribbean", "Northern America and Europe", 
+                                           "Oceania excluding Australia and New Zealand", "Puerto Rico",
+                                           "Western Asia and Northern Africa"))
+
+# how many countries are missing gdp now?
+country %>% 
+  filter(is.na(as.numeric(gdp))) %>% 
+  group_by(country_or_territory_name) %>% 
+  summarize(count = n())
+```
+
+We have decreased the number from 42 to 32. Now we can rename some of the countries where names are mismatched, and drop the rest.
+```{r}
+gdp <- gdp %>% 
+  mutate(country_name = case_when(
+    country_name == "United States" ~ "United States of America",
+    country_name == "United Kingdom" ~ "United Kingdom of Great Britain and Northern Ireland",
+    country_name == "Bolivia" ~ "Bolivia (Plurinational State of)",
+    country_name == "Congo, Rep." ~ "Congo",
+    country_name ==  "Congo, Dem. Rep" ~ "Democratic Republic of the Congo",
+    country_name == "Bahamas, The" ~ "Bahamas",
+    country_name == "Cote d'Ivoire" ~ "Côte d’Ivoire",
+    country_name == "Egypt, Arab Rep." ~ "Egypt",
+    country_name == "Gambia, The" ~ "Gambia",
+  country_name == "Egypt, Arab Rep." ~ "Egypt",
+  country_name == "Iran, Islamic Rep." ~ "Iran (Islamic Republic of)",
+  country_name == "Korea, Dem. People's Rep." ~ "Democratic People's Republic of Korea",
+  country_name == "Kyrgyz Republic" ~ "Kyrgyzstan",
+  country_name == "Lao PDR" ~ "Lao People's Democratic Republic",
+  country_name == "Moldova" ~ "Republic of Moldova",
+  country_name == "Slovak Republic" ~ "Slovakia",
+  country_name == "Somalia, Fed. Rep." ~ "Somalia",
+  country_name == "St. Kitts and Nevis" ~ "Saint Kitts and Nevis",
+  country_name == "St. Lucia" ~ "Saint Lucia",
+  country_name == "St. Vincent and the Grenadines" ~ "Saint Vincent and the Grenadines",
+  country_name == "Tanzania" ~ "United Republic of Tanzania",
+  country_name == "Turkiye" ~ "Türkiye",
+  country_name == "Venezuela, RB" ~ "Venezuela (Bolivarian Republic of)",
+  country_name == "West Bank and Gaza" ~ "State of Palestine",
+  TRUE ~ country_name
+))
+
+# rejoin
+country <- country %>% 
+  left_join(gdp, by = join_by(country_or_territory_name == country_name))
+```
+
+```{r}
+# how many countries are missing gdp now?
+country %>% 
+  filter(is.na(as.numeric(gdp.y))) %>% 
+  group_by(country_or_territory_name) %>% 
+  summarize(count = n())
 ```
 
