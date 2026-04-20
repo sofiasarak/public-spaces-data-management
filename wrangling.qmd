@@ -69,7 +69,7 @@ transport_access <- transport_access %>%
 public_space <- public_space %>% 
   select(city_code, average_share_of_the_built_up_area_of_cities_that_is_open_space_for_public_use_for_all_percent_a,
          average_share_of_urban_population_with_convenient_access_to_open_public_spaces_percent_b, data_reference_year) %>% 
-  rename(open_space_area = average_share_of_the_built_up_area_of_cities_that_is_open_space_for_public_use_for_all_percent_a,
+  rename(open_space_area_share = average_share_of_the_built_up_area_of_cities_that_is_open_space_for_public_use_for_all_percent_a,
          open_space_pop = average_share_of_urban_population_with_convenient_access_to_open_public_spaces_percent_b)
 ```
 
@@ -86,7 +86,7 @@ green_areas <- green_areas %>%
   # pivot longer
   pivot_longer(cols = starts_with("average"),
                names_to = "year",
-               values_to = "city_green_area_share") %>% 
+               values_to = "green_area_share") %>% 
   
   # change observation names to just be years
   mutate(year = case_when(
@@ -192,21 +192,25 @@ gdp <- gdp %>%
     country_name == "Cote d'Ivoire" ~ "Côte d’Ivoire",
     country_name == "Egypt, Arab Rep." ~ "Egypt",
     country_name == "Gambia, The" ~ "Gambia",
-  country_name == "Egypt, Arab Rep." ~ "Egypt",
-  country_name == "Iran, Islamic Rep." ~ "Iran (Islamic Republic of)",
-  country_name == "Korea, Dem. People's Rep." ~ "Democratic People's Republic of Korea",
-  country_name == "Kyrgyz Republic" ~ "Kyrgyzstan",
-  country_name == "Lao PDR" ~ "Lao People's Democratic Republic",
-  country_name == "Moldova" ~ "Republic of Moldova",
-  country_name == "Slovak Republic" ~ "Slovakia",
-  country_name == "Somalia, Fed. Rep." ~ "Somalia",
-  country_name == "St. Kitts and Nevis" ~ "Saint Kitts and Nevis",
-  country_name == "St. Lucia" ~ "Saint Lucia",
-  country_name == "St. Vincent and the Grenadines" ~ "Saint Vincent and the Grenadines",
-  country_name == "Tanzania" ~ "United Republic of Tanzania",
-  country_name == "Turkiye" ~ "Türkiye",
-  country_name == "Venezuela, RB" ~ "Venezuela (Bolivarian Republic of)",
-  country_name == "West Bank and Gaza" ~ "State of Palestine",
+    country_name == "Egypt, Arab Rep." ~ "Egypt",
+    country_name == "Iran, Islamic Rep." ~ "Iran (Islamic Republic of)",
+    country_name == "Korea, Dem. People's Rep." ~ "Democratic People's Republic of Korea",
+    country_name == "Kyrgyz Republic" ~ "Kyrgyzstan",
+    country_name == "Lao PDR" ~ "Lao People's Democratic Republic",
+    country_name == "Moldova" ~ "Republic of Moldova",
+    country_name == "Slovak Republic" ~ "Slovakia",
+    country_name == "Somalia, Fed. Rep." ~ "Somalia",
+    country_name == "St. Kitts and Nevis" ~ "Saint Kitts and Nevis",
+    country_name == "St. Lucia" ~ "Saint Lucia",
+    country_name == "St. Vincent and the Grenadines" ~ "Saint Vincent and the Grenadines",
+    country_name == "Tanzania" ~ "United Republic of Tanzania",
+    country_name == "Turkiye" ~ "Türkiye",
+    country_name == "Venezuela, RB" ~ "Venezuela (Bolivarian Republic of)",
+    country_name == "West Bank and Gaza" ~ "State of Palestine",
+    country_name == "Korea, Rep." ~ "Republic of Korea",
+    country_name == "Congo, Dem. Rep." ~ "Democratic Republic of the Congo",
+    country_name == "Netherlands" ~ "Netherlands (Kingdom of the)",
+    country_name == "Yemen, Rep." ~ "Yemen",
   TRUE ~ country_name
 ))
 
@@ -221,5 +225,50 @@ country %>%
   filter(is.na(as.numeric(gdp.y))) %>% 
   group_by(country_or_territory_name) %>% 
   summarize(count = n())
+```
+
+These are all counties where GDP from World Bank is actually NA (and not due to differences in country name).
+
+```{r}
+country <- country %>% 
+  select(country_or_territory_code, country_or_territory_name, sdg_region, sdg_sub_region, gdp.y) %>% 
+  rename(annual_gdp = gdp.y)
+
+rm(gdp)
+```
+
+## Finl Check
+```{r}
+glimpse(city)
+```
+```{r}
+glimpse(country)
+```
+```{r}
+glimpse(green_areas)
+```
+```{r}
+public_space <- public_space %>% 
+  mutate(reference_year = as.factor(data_reference_year)) %>% 
+  select(-data_reference_year)
+
+glimpse(public_space)
+```
+```{r}
+transport_access <- transport_access %>% 
+  mutate(reference_year = as.factor(data_reference_year)) %>% 
+  select(-data_reference_year)
+
+glimpse(transport_access)
+```
+
+
+## Saving
+```{r}
+write_csv(city, file.path("data", "city.csv"))
+write_csv(country, file.path("data", "country.csv"))
+write_csv(green_areas, file.path("data", "green_areas.csv"))
+write_csv(public_space, file.path("data", "public_space.csv"))
+write_csv(transport_access, file.path("data", "transport_access.csv"))
 ```
 
