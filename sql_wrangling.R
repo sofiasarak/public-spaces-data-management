@@ -27,9 +27,17 @@ unique(missing$country_or_territory_code)
 country <- country %>% 
   filter(!is.na(annual_gdp))
 
+# group by country code --> currently is repeated a bunch
+country <- country %>% 
+  filter(!duplicated(country_or_territory_code))
+
 ## Green spaces -- explore city_code duplicates
 green %>% 
   filter(duplicated(city_code))
+
+# remove NAs
+green <- green %>% 
+  filter(!is.na(city_code))
 
 # Because our data is in long format, all city_codes repeat 3 times (one for each year). In SQL, we will
 # set the primary key to be a compound of city_code and year
@@ -49,6 +57,32 @@ filter(space, is.na(space$open_space_pop))
 # there were some issues with the year column as well --> warning that is is of class BIGINT?
 unique(space$reference_year)
 glimpse(space)
+
+# drop NAs in city_code column
+space <- space %>% 
+  filter(!is.na(city_code))
+
+# multiple cities with data from diff years: keep most recent
+space_max <- space %>% 
+  group_by(city_code) %>% 
+  summarize(max_year = max(reference_year))
+
+space <- space %>% 
+  left_join(space_max) %>% 
+  filter(reference_year == max_year) %>% 
+  filter(!is.na(city_code)) %>% 
+  select(!max_year)
+
+# some rows are duplicated where one vars is NA and the other is not
+# here, I combine those values so each duplicate has the same values (both pop and area)
+space <-space %>% 
+  group_by(city_code) %>% 
+  mutate(open_space_area_share = sum(open_space_area_share, na.rm = TRUE),
+         open_space_pop = sum(open_space_pop, na.rm = TRUE))
+
+# now, I'll drop the duplictaes
+space <- space %>% 
+  filter(!duplicated(city_code))
 
 ## Transport Access -- explore duplicate city_codes
 dup <- transport %>% 
