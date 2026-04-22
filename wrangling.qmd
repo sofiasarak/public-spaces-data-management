@@ -261,6 +261,11 @@ transport_access <- transport_access %>%
 
 glimpse(transport_access)
 ```
+Fixing duplicate issue in city
+```{r}
+city <- city %>% 
+  filter(!duplicated(city_code))
+```
 
 
 ## Saving
