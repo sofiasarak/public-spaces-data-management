@@ -1,0 +1,121 @@
+---
+title: "R Querying and Viz"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(duckdb)
+library(dplyr)
+```
+## Connecting to a database
+```{r}
+conn <- DBI::dbConnect(duckdb::duckdb(),
+                       dbdir = "data/public-spaces")
+
+conn
+```
+
+
+```{r}
+DBI::dbListTables(conn)
+```
+
+
+```{r}
+green_areas <- dbGetQuery(conn, "SELECT year, green_area_share, city_name, country_or_territory_code, country_or_territory_name, annual_gdp FROM
+    Country C JOIN 
+    (SELECT year, green_area_share, city_name, country_or_territory_code FROM Green_Areas G 
+    JOIN City C USING (city_code)) 
+    J USING (country_or_territory_code)
+    WHERE year = 2020")
+```
+
+```{r}
+green_areas_avg <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
+    Country C 
+    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
+    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
+    WHERE year = 2020")
+```
+
+```{r}
+green_areas_avg_top10 <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
+    Country C 
+    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
+    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
+    WHERE year = 2020
+    GROUP BY country_or_territory_name
+    ORDER BY ANY_VALUE(annual_gdp) DESC
+    LIMIT 10")
+```
+
+```{r}
+green_areas_avg_bot10 <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
+    Country C 
+    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
+    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
+    WHERE year = 2020
+    GROUP BY country_or_territory_name
+    ORDER BY ANY_VALUE(annual_gdp)
+    LIMIT 10")
+```
+
+
+```{r}
+green_areas_avg_top10
+```
+
+
+```{r}
+green_areas_avg
+```
+
+
+Create visualization
+```{r}
+ggplot(green_areas_avg_1, aes(avg_green_area, gdp)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+```{r}
+ggplot(green_areas_avg_1, aes(avg_green_area, gdp)) +
+  geom_line()
+```
+
+
+```{r}
+green_areas_avg_1 <- green_areas_avg %>% 
+  filter(gdp < 10000000000000)
+```
+
+```{r}
+ggplot(green_areas_avg_top10, aes(x = avg_green_area, y = reorder(country, avg_green_area))) +
+  geom_col() +
+  xlim(0, 35)
+```
+```{r}
+ggplot(green_areas_avg_bot10, aes(x = avg_green_area, y = reorder(country, avg_green_area))) +
+  geom_col() +
+  xlim(0, 35)
+```
+
+```{r}
+all <- rbind(green_areas_avg_top10, green_areas_avg_bot10)
+```
+
+```{r}
+ggplot(all, aes(x = avg_green_area, y = reorder(country, gdp))) +
+  geom_col() 
+```
+
+
+## Closing the connection!!
+```{r}
+DBI::dbDisconnect(conn, shutdown = TRUE)
+```
+
+
