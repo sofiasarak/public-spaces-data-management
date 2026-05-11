@@ -10,6 +10,7 @@ library(DBI)
 library(duckdb)
 library(dplyr)
 library(patchwork)
+library(showtext)
 ```
 ## Connecting to a database
 ```{r}
@@ -193,15 +194,9 @@ green_areas_avg
 open_space_avg
 ```
 
+## Prep data for visualization
 
-Create visualization
-```{r}
-ggplot(green_areas_avg_1, aes(avg_green_area, gdp)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```
-The three data frames differ in what countries the data is available for. I will inner join on country to only keep matching countries.
-
+The three dataframes differ in which countries the data is available for. I want the number of countries to be consistent across all three plots, so I will inner join all three on country to keep only those that match everywhere.
 ```{r}
 #| message: false
 #| warning: false
@@ -221,22 +216,10 @@ transit_avg <- transit_avg %>%
   filter(country %in% join$country)
 ```
 
-
+There are a few data points with really high GDP.
 ```{r}
+# filter three data frames by GDP
 green_areas_avg <- green_areas_avg %>% 
-  filter(country %in% open_space_pop_avg$country)
-
-transit_avg <- transit_avg %>% 
-  filter(country %in% green_areas_avg$country)
-```
-
-
-
-```{r}
-green_areas_avg <- green_areas_avg %>% 
-  filter(gdp < 10000000000000)
-
-open_space_avg <- open_space_avg %>% 
   filter(gdp < 10000000000000)
 
 transit_avg <- transit_avg %>% 
@@ -246,87 +229,118 @@ open_space_pop_avg <- open_space_pop_avg %>%
   filter(gdp < 10000000000000)
 ```
 
+## Prepare theme elements
+```{r}
+# save palette colors
+mediumgreen <-  "#606C38"
+darkgreen <- "#283618"
+bg <- "#FEFAE0"
+mediumorange <- "#DDA15E"
+darkorange <- "#BC6C25"
+
+# load font
+font_add_google(name = "Montserrat", family = "mont")
+font_add_google(name = "Google Sans", family = "google")
+```
 
 ```{r}
+# create ggplot theme to apply to all 3 plots
+my_theme <- function(base_size = 17){
+  theme_minimal(base_size = base_size) +
+    theme(
+    panel.grid = element_line(color = mediumorange, linewidth = 0.2),
+    plot.title = element_text(family = "mont",
+                                  size = rel(0.99),
+                                  margin = margin(b = 7)),
+    plot.background = element_rect(fill = bg,
+                                   color = bg),
+    panel.background = element_rect(fill = bg, 
+                                    color = bg),
+        plot.subtitle = element_text(family = "google", size = rel(0.70)),
+        axis.text.y = element_text(hjust = 0, family = "google", size = rel(0.5), color = darkorange),
+        axis.text.x = element_text(family = "google", size = rel(0.5), color = darkorange),
+        axis.title = element_text(family = "google", size = rel(0.6), color = darkorange),
+    )
+}
+```
+
+
+## Plot
+
+```{r}
+#| warning: false
+#| message: false
+showtext_auto(enable = TRUE)
+
 green <- ggplot(green_areas_avg, aes(avg_green_area, gdp)) +
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.5,
+             color = mediumgreen,
+             fill = mediumgreen) +
   geom_smooth(method = "lm", # calculate linear relationship
               se = FALSE, # remove confidence interval
-              linetype = 3) + # dotted line
+              linetype = 2, # dotted line
+              linewidth = 1,
+              color = darkgreen) + 
   labs(x = "Average % Share\nof Green Area",
        y = "National GDP (USD 2020)") +
   
   # adjust y-axis labels to read as "trillion"
   # set y limits to start at 0 -- geom_smooth goes below 0, throwing off axis
   scale_y_continuous( labels = scales::label_number(scale = 1e-12, suffix = " trillion"),
-                      limits = c(0, NA)) 
+                      limits = c(0, NA)) +
+  my_theme()
 
 open <- ggplot(open_space_pop_avg, aes(avg_open_pop, gdp)) +
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.5,
+             color = mediumgreen,
+             fill = mediumgreen) +
   geom_smooth(method = "lm",
               se = FALSE,
-              linetype = 3) +
+              linetype = 2, # dotted line
+              linewidth = 1,
+              color = darkgreen) +
    labs(x = "Average % of Population\nwith Access to Open Area",
        y = "National GDP (USD 2020)") +
   scale_y_continuous(labels = scales::label_number(scale = 1e-12, suffix = " trillion"),
-                     limits = c(0, NA)) 
+                     limits = c(0, NA)) +
+  my_theme()
 
 transit <- ggplot(transit_avg, aes(avg_transport_pop, gdp)) +
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.5,
+             color = mediumgreen,
+             fill = mediumgreen) +
   geom_smooth(method = "lm",
               se = FALSE,
-              linetype = 3) +
+              linetype = 2, # dotted line
+              linewidth = 1,
+              color = darkgreen) +
    labs(x = "Average % of Population\nwith Access to Public Transit",
        y = "National GDP (USD 2020)") +
    scale_y_continuous(labels = scales::label_number(scale = 1e-12, suffix = " trillion"),
-                      limits = c(0, NA)) 
+                      limits = c(0, NA))+
+  my_theme()
 
 green + open + transit +
   plot_layout(axes="collect") + 
-  plot_annotation(title = "Urban Resources and GDP: Data from cities in 111 countries worldwide",
-                  subtitle = "Greater economic prosperity correlates with greater resources, such as green area, open space,\nand public transportation.",
-                  caption = 'Access is defined as "Share of urban population with convenient access to public transport" by the United Nations.')
-```
+  plot_annotation(title = "Urban Resources & GDP: 111 countries worldwide",
+                  subtitle = "Greater economic prosperity correlates with greater resources, such as\ngreen area, open space, and public transportation.",
+                  caption = 'Access is defined as "Share of urban population with convenient access to public transport" by the United Nations.',
+                  theme = theme(plot.background = element_rect(fill  = bg),
+                                plot.title = element_text(family = "mont",
+                                                          face = "bold",
+                                  size = 17,
+                                  margin = margin(b = 7, r = 7),
+                                  color = darkgreen),
+                                plot.subtitle = element_text(family = "mont",
+                                  size = 12,
+                                  margin = margin(b = 7),
+                                  color = darkgreen),
+                                plot.caption = element_text(family = "mont",
+                                  size = 8,
+                                 # margin = margin(b = 7),
+                                  color = darkgreen)))
 
-
-```{r}
-summary(open_space_avg)
-
-summary(green_areas_avg)
-
-summary(transit_avg)
-```
-
-
-```{r}
-ggplot(green_areas_avg_1, aes(avg_green_area, gdp)) +
-  geom_line()
-```
-
-
-```{r}
-green_areas_avg_1 <- green_areas_avg %>% 
-  filter(gdp < 10000000000000)
-```
-
-```{r}
-ggplot(green_areas_avg_top10, aes(x = avg_green_area, y = reorder(country, avg_green_area))) +
-  geom_col() +
-  xlim(0, 35)
-```
-```{r}
-ggplot(green_areas_avg_bot10, aes(x = avg_green_area, y = reorder(country, avg_green_area))) +
-  geom_col() +
-  xlim(0, 35)
-```
-
-```{r}
-all <- rbind(green_areas_avg_top10, green_areas_avg_bot10)
-```
-
-```{r}
-ggplot(all, aes(x = avg_green_area, y = reorder(country, gdp))) +
-  geom_col() 
+showtext_auto(enable = FALSE)
 ```
 
 
