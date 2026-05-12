@@ -1,10 +1,19 @@
 ---
 title: "R Querying and Viz"
+author: "Sofia Sarak"
+date: "May 15, 2026"
 format: html
 editor: visual
 ---
 
+The following notebook contains SQL queries and a visualization based in answering the question: **do wealthier countries have healthier cities**? UN Urban Indicators and World Bank Group data is used to make this comparison.
+
+## Setup
+
 ```{r}
+#| warning: false
+#| message: false
+# load necessary libraries
 library(tidyverse)
 library(DBI)
 library(duckdb)
@@ -12,96 +21,33 @@ library(dplyr)
 library(patchwork)
 library(showtext)
 ```
-## Connecting to a database
+
 ```{r}
+# connect to database using duckdb
 conn <- DBI::dbConnect(duckdb::duckdb(),
                        dbdir = "data/public-spaces")
-
+# check connection
 conn
 ```
 
-
 ```{r}
+# view contents of database
 DBI::dbListTables(conn)
 ```
 
-```{r}
-open <- tbl(conn, "Open_space")
-```
-```{r}
-transport <- tbl(conn, "Transport")
-```
+## SQL Queries
 
+Here, I run three separate SQL queries, as my final visualization will feature three different urban resource variables:
 
+-   average share of green area in a city
 
-```{r}
-transport
-```
+-   the percent of a city's population that has easy access to public open space
 
-```{r}
-green
-```
+-   the percent of a city's population that has easy access to public transportation
 
-```{r}
-open
-```
+A more detailed description can be found on the UN Urban Indicator Database's website (see repository README).
 
-
-```{r}
-green <- tbl(conn, "Green_Areas")
-country <- tbl(conn, "Country")
-city <- tbl(conn, "City")
-```
-
-```{r}
-join_areas <-  open %>% 
-  left_join(green) %>% 
-  select(city_code, open_space_area_share, green_area_share) %>% 
-  collect()
-```
-```{r}
-join_country <- join_areas %>% 
-  left_join(city, copy = TRUE) %>% 
-  collect()
-```
-
-Create city country join
-```{r}
-loc <- dbGetQuery(conn, "SELECT city_code, city_name, country_or_territory_code, country_or_territory_name, annual_gdp FROM
-    Country 
-    JOIN City USING (country_or_territory_code)")
-
-# view
-loc
-```
-
-Join location to joined open and green areas df and average
-```{r}
-final <- join_areas %>% 
-  left_join(loc) %>% 
-  group_by(country_or_territory_name) %>% 
-  summarize(avg_green_area_share = mean(green_area_share, na.rm = TRUE),
-            avg_open_space_share = mean(open_space_area_share, na.rm = TRUE)) %>% 
-  collect()
-```
-
-plot
-```{r}
-ggplot(final, aes(avg_green_area_share, avg_open_space_share)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```
-
-
-```{r}
-green_areas <- dbGetQuery(conn, "SELECT AVG(green_area_share), AVG(open_space_area_share) FROM Open_space O JOIN
-(SELECT year, green_area_share, city_name, country_or_territory_code, country_or_territory_name, annual_gdp FROM
-    Country C JOIN 
-    (SELECT year, green_area_share, city_name FROM Green_Areas G 
-    JOIN City C USING (city_code)) 
-    J USING (country_or_territory_code)) USING (country_or_territory_code)
-    WHERE year = 2020")
-```
+### Average share of green area
 
 ```{r}
 green_areas_avg <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, 
@@ -109,20 +55,11 @@ ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FR
     Country C 
     JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
     Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-     WHERE year = 2020
+    WHERE year = 2020
     GROUP BY country_or_territory_name")
 ```
 
-```{r}
-open_space_avg <- dbGetQuery(conn, "SELECT AVG(open_space_share) AS avg_open_share, 
-ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
-    Country C 
-    JOIN (SELECT reference_year, open_space_area_share, city_name, country_or_territory_code FROM 
-    Open_space G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-     WHERE reference_year = 2020
-    GROUP BY country_or_territory_name")
-```
-
+### Public open space access
 
 ```{r}
 open_space_pop_avg <- dbGetQuery(conn, "SELECT AVG(open_space_pop) AS avg_open_pop, 
@@ -130,11 +67,11 @@ ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FR
     Country C 
     JOIN (SELECT reference_year, open_space_pop, city_name, country_or_territory_code FROM 
     Open_space G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-     WHERE reference_year = 2020
+    WHERE reference_year = 2020
     GROUP BY country_or_territory_name")
 ```
 
-
+### Public transportation access
 
 ```{r}
 transit_avg <- dbGetQuery(conn, "SELECT AVG(transport_pop) AS avg_transport_pop, 
@@ -142,70 +79,29 @@ ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FR
     Country C 
     JOIN (SELECT reference_year, transport_pop, city_name, country_or_territory_code FROM 
     Transport G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-     WHERE reference_year = 2020
+    WHERE reference_year = 2020
     GROUP BY country_or_territory_name")
 ```
 
+Each query contains two separate joins: the most inner links the urban resource table (Green_Areas, Open_space, or Transport) to the City table on city code, while the outer joins those two tables to Country table (which houses GDP information). 
 
-```{r}
-green_areas_avg_top10 <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
-    Country C 
-    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
-    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-    WHERE year = 2020
-    GROUP BY country_or_territory_name
-    ORDER BY ANY_VALUE(annual_gdp) DESC
-    LIMIT 10")
-```
+The queries also aggregate the urban resource variable to its mean by country (since there are multiple cities with data in each country). 
 
-```{r}
-green_areas_avg_bot10 <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, ANY_VALUE(annual_gdp) AS gdp FROM
-    Country C 
-    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
-    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-    WHERE year = 2020
-    GROUP BY country_or_territory_name
-    ORDER BY ANY_VALUE(annual_gdp)
-    LIMIT 10")
-```
-
-```{r}
-green_open <- dbGetQuery(conn, "SELECT AVG(green_area_share) AS avg_green_area, ANY_VALUE(country_or_territory_name) AS country, AVG() AS gdp FROM
-    Country C 
-    JOIN (SELECT year, green_area_share, city_name, country_or_territory_code FROM 
-    Green_Areas G JOIN City C USING (city_code)) J USING (country_or_territory_code)
-    WHERE year = 2020
-    GROUP BY country_or_territory_name
-    ORDER BY ANY_VALUE(annual_gdp)
-    LIMIT 10")
-```
-
-
-
-```{r}
-green_areas_avg_top10
-```
-
-
-```{r}
-green_areas_avg
-```
-```{r}
-open_space_avg
-```
-
-## Prep data for visualization
+## Prepare data for visualization
 
 The three dataframes differ in which countries the data is available for. I want the number of countries to be consistent across all three plots, so I will inner join all three on country to keep only those that match everywhere.
+
 ```{r}
 #| message: false
 #| warning: false
+
+# inner join the three data frames on country
 join <-  green_areas_avg %>% 
   inner_join(open_space_pop_avg, by = "country") %>% 
   inner_join(transit_avg, by = "country")
-
 # this data frame contains all of the matching countries in our three datasets
-# we will filter each original df to match this list of countries
+
+# filter each original df to match this list of countries
 green_areas_avg <- green_areas_avg %>% 
   filter(country %in% join$country)
 
@@ -216,7 +112,8 @@ transit_avg <- transit_avg %>%
   filter(country %in% join$country)
 ```
 
-There are a few data points with really high GDP.
+There are a few data points with really high GDP. I filter them out before plotting, since including them in the visualization smushes the rest of the data, making the relationship between variables difficult to discern.
+
 ```{r}
 # filter three data frames by GDP
 green_areas_avg <- green_areas_avg %>% 
@@ -230,6 +127,7 @@ open_space_pop_avg <- open_space_pop_avg %>%
 ```
 
 ## Prepare theme elements
+
 ```{r}
 # save palette colors
 mediumgreen <-  "#606C38"
@@ -238,13 +136,14 @@ bg <- "#FEFAE0"
 mediumorange <- "#DDA15E"
 darkorange <- "#BC6C25"
 
-# load font
+# load fonts
 font_add_google(name = "Montserrat", family = "mont")
 font_add_google(name = "Google Sans", family = "google")
 ```
 
 ```{r}
 # create ggplot theme to apply to all 3 plots
+# the majority of this code changes the colors and sizes of plot elements
 my_theme <- function(base_size = 17){
   theme_minimal(base_size = base_size) +
     theme(
@@ -264,8 +163,9 @@ my_theme <- function(base_size = 17){
 }
 ```
 
-
 ## Plot
+
+Here, I create three separate scatterplots for each urban resource variable, then join them all using the {patchwork} package.
 
 ```{r}
 #| warning: false
@@ -299,7 +199,7 @@ open <- ggplot(open_space_pop_avg, aes(avg_open_pop, gdp)) +
               linetype = 2, # dotted line
               linewidth = 1,
               color = darkgreen) +
-   labs(x = "Average % of Population\nwith Access to Open Area",
+   labs(x = "Average % of Population\nwith Access to Open Space",
        y = "National GDP (USD 2020)") +
   scale_y_continuous(labels = scales::label_number(scale = 1e-12, suffix = " trillion"),
                      limits = c(0, NA)) +
@@ -320,8 +220,11 @@ transit <- ggplot(transit_avg, aes(avg_transport_pop, gdp)) +
                       limits = c(0, NA))+
   my_theme()
 
+# join 3 plots into 1
 green + open + transit +
-  plot_layout(axes="collect") + 
+  plot_layout(axes="collect") + # specify shared y-axis
+  
+  # plot title, subtitle, and caption, along with their associated theming
   plot_annotation(title = "Urban Resources & GDP: 111 countries worldwide",
                   subtitle = "Greater economic prosperity correlates with greater resources, such as\ngreen area, open space, and public transportation.",
                   caption = 'Access is defined as "Share of urban population with convenient access to public transport" by the United Nations.',
@@ -329,7 +232,7 @@ green + open + transit +
                                 plot.title = element_text(family = "mont",
                                                           face = "bold",
                                   size = 17,
-                                  margin = margin(b = 7, r = 7),
+                                  margin = margin(t = 7, b = 7, r = 7), # adjusts spacing around title
                                   color = darkgreen),
                                 plot.subtitle = element_text(family = "mont",
                                   size = 12,
@@ -340,13 +243,14 @@ green + open + transit +
                                  # margin = margin(b = 7),
                                   color = darkgreen)))
 
+# ggsave("scatterplot.png")
+
 showtext_auto(enable = FALSE)
 ```
 
-
 ## Closing the connection!!
+
 ```{r}
+# close duckdb connection
 DBI::dbDisconnect(conn, shutdown = TRUE)
 ```
-
-
