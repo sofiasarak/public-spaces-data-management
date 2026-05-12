@@ -18,11 +18,13 @@ of this project is the following visualization:
 └── wrangling.qmd
 ```
 
-To recreate this analysis: 1. Download data from its sources 2. Ensure
-your R session fits the specifications in `requirements.txt` 3. Wrangle
-data using `wrangling.qmd` 4. Create database using SQL code in
-`database.sql` 5. Query database from `query.sql`, or run the `viz.qmd`
-script to both query (directly from R) and visualize the data
+To recreate this analysis: 
+
+1. Download data from its sources
+2. Ensure your R session fits the specifications in `requirements.txt`
+3. Wrangle data using `wrangling.qmd`
+4. Create database using SQL code in `database.sql`
+5. Query database from `query.sql`, or run the `viz.qmd` script to both query (directly from R) and visualize the data
 
 ## Data Sources
 
@@ -38,9 +40,9 @@ and achievement of the urban-related [Sustainable Development
 Goals](https://data.unhabitat.org/pages/6486befd9595404887488626dce2dbed).
 
 The following datasets were used in this project, sourced from the links
-below: - [Open spaces and green
-areas](https://data.unhabitat.org/pages/open-spaces-and-green-areas) -
-[Urban transport](https://data.unhabitat.org/pages/urban-transport)
+below: 
+-  [Open spaces and green areas](https://data.unhabitat.org/pages/open-spaces-and-green-areas)
+-  [Urban transport](https://data.unhabitat.org/pages/urban-transport)
 
 **World Bank Open Data**
 
@@ -50,8 +52,8 @@ help ensure that a wealth of high quality, useful data is easy to access
 and use for analysis, strategic planning, and policy action.
 
 The following datatset was used in this project, sourced from the link
-below: - [GDP (current
-US\$)](https://data.worldbank.org/indicator/NY.GDP.MKTP.CD)
+below:
+-   [GDP (current USD)](https://data.worldbank.org/indicator/NY.GDP.MKTP.CD)
 
 ## References and Acknowledgements
 
