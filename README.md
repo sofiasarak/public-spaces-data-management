@@ -1,6 +1,6 @@
 # Public Space in Major Cities: A Database
 
-Building a database that organizes and houses UN-Habitat's Global Urban Indicator data and links it to national-level GDP data.
+Building a database that organizes and houses UN-Habitat's Global Urban Indicator data and links it to country-level GDP data.
 
 ## Repository Structure and Description
 ```
