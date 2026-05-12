@@ -2,7 +2,21 @@
 
 Building a database that organizes and houses UN-Habitat's Global Urban Indicator data and links it to national-level GDP data.
 
-## Repository Structure
+## Repository Structure and Description
+```
+├── database.sql
+├── query.sql
+├── README.md
+├── requirements.txt
+├── viz.qmd
+└── wrangling.qmd
+```
+To recreate this analysis:
+1. Download data from its sources
+2. Ensure your R session fits the specifications in `requirements.txt`
+3. Wrangle data using `wrangling.qmd`
+4. Create database using SQL code in `database.sql`
+5. Query database from `query.sql`, or run the `viz.qmd` script to both query (directly from R) and visualize the data
 
 ## Data Sources
 
