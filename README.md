@@ -72,3 +72,11 @@ for providing me with the skills necessary to build this database!
 Additionally, this project was inspired by the book Happy City by
 Charles Montgomery, which has taught me the important of green spaces,
 accessibility, and community for human joy in urban spaces.
+
+### Data Citations
+
+UN-Habitat. (n.d.). Open spaces and green areas. UN-Habitat Data Portal. https://data.unhabitat.org/pages/open-spaces-and-green-areas
+
+UN-Habitat. (n.d.). Urban transport. UN-Habitat Data Portal. https://data.unhabitat.org/pages/urban-transport
+
+The World Bank. (n.d.). GDP (current US$). World Bank Open Data. https://data.worldbank.org/indicator/NY.GDP.MKTP.CD
